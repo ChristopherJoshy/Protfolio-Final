@@ -262,5 +262,4 @@ app.get('/api/github', async (_req: Request, res: Response) => {
   }
 });
 
-// Export for Vercel
 export default app;
