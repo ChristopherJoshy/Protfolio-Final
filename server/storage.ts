@@ -4,6 +4,7 @@ import {
   certificates, type Certificate, type InsertCertificate,
   messages, type Message, type InsertMessage
 } from "@shared/schema";
+import { DbStorage } from "./db-storage";
 
 export interface IStorage {
   // User operations
@@ -66,8 +67,8 @@ export class MemStorage implements IStorage {
       title: "KKNotesV2",
       description: "A premium resource hub for KTU Computer Science Engineering study materials featuring high-quality notes and curated video tutorials.",
       techStack: "JavaScript, HTML, CSS",
-      imageUrl: "",
-      demoLink: "https://kknotes.vercel.app",
+      imageUrl: null,
+      demoLink: "https://christopherjoshy.github.io/KKNotesV2/",
       githubLink: "https://github.com/ChristopherJoshy/KKNotes",
       featured: true,
     });
@@ -76,10 +77,27 @@ export class MemStorage implements IStorage {
       title: "MaestraMind",
       description: "An AI-powered adaptive learning web application that transforms study notes into personalized learning experiences using Google's Gemini API.",
       techStack: "JavaScript, HTML/CSS, Firebase, Gemini API",
-      imageUrl: "",
-      demoLink: "https://maestramind.vercel.app",
+      imageUrl: null,
+      demoLink: "https://christopherjoshy.github.io/MaestraMind/",
       githubLink: "https://github.com/ChristopherJoshy/MaestraMind",
       featured: true,
+    });
+
+    // Add sample certificates
+    this.createCertificate({
+      title: "AWS Cloud Practitioner",
+      issuer: "Amazon Web Services",
+      date: "June 2023",
+      credentialUrl: "https://aws.amazon.com/certification/certified-cloud-practitioner/",
+      imageUrl: null
+    });
+
+    this.createCertificate({
+      title: "React.js Developer",
+      issuer: "Meta",
+      date: "September 2023",
+      credentialUrl: "https://www.coursera.org/professional-certificates/meta-front-end-developer",
+      imageUrl: null
     });
   }
 
@@ -90,7 +108,7 @@ export class MemStorage implements IStorage {
 
   async getUserByUsername(username: string): Promise<User | undefined> {
     return Array.from(this.users.values()).find(
-      (user) => user.username === username,
+      (user) => user.username === username
     );
   }
 
@@ -115,7 +133,11 @@ export class MemStorage implements IStorage {
     const project: Project = { 
       ...insertProject, 
       id, 
-      createdAt: new Date() 
+      createdAt: new Date(),
+      imageUrl: insertProject.imageUrl ?? null,
+      demoLink: insertProject.demoLink ?? null,
+      githubLink: insertProject.githubLink ?? null,
+      featured: insertProject.featured ?? false
     };
     this.projects.set(id, project);
     return project;
@@ -152,7 +174,9 @@ export class MemStorage implements IStorage {
     const certificate: Certificate = { 
       ...insertCertificate, 
       id, 
-      createdAt: new Date() 
+      createdAt: new Date(),
+      imageUrl: insertCertificate.imageUrl ?? null,
+      credentialUrl: insertCertificate.credentialUrl ?? null
     };
     this.certificates.set(id, certificate);
     return certificate;
@@ -206,4 +230,11 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// Choose the storage implementation based on the environment
+// Use MemStorage for development and DbStorage for production on Vercel
+// const isProduction = process.env.NODE_ENV === 'production';
+// const useDbStorage = isProduction && (process.env.DATABASE_URL || process.env.VERCEL_ENV);
+
+// Always use database storage with our hardcoded connection string
+console.log('🔌 Initializing database storage connection...');
+export const storage = new DbStorage();

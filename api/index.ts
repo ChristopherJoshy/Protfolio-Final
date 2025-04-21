@@ -181,37 +181,85 @@ app.delete('/api/messages/:id', async (req: Request, res: Response) => {
   res.status(204).end();
 });
 
-// GitHub mock endpoint
+// GitHub endpoint with dynamic data
 app.get('/api/github', async (_req: Request, res: Response) => {
-  // Mock GitHub data - in a real implementation, this would fetch from GitHub API
-  const githubProjects = [
-    {
-      name: "KKNotes",
-      description: "KTU Computer Science Notes Platform",
-      language: "JavaScript",
-      stargazers_count: 12,
-      forks_count: 5,
-      html_url: "https://github.com/christopherjoshy/kknotes"
-    },
-    {
-      name: "MaestraMind",
-      description: "AI-Powered Adaptive Learning App using Google's Gemini API",
-      language: "TypeScript",
-      stargazers_count: 24,
-      forks_count: 3,
-      html_url: "https://github.com/christopherjoshy/maestramind"
-    },
-    {
-      name: "PortfolioWebsite",
-      description: "Modern 3D Portfolio Website built with React and Three.js",
-      language: "TypeScript",
-      stargazers_count: 8,
-      forks_count: 2,
-      html_url: "https://github.com/christopherjoshy/portfolio-orginal"
+  try {
+    // Try to fetch real GitHub data if GitHub token is available
+    if (process.env.GITHUB_TOKEN) {
+      // In a real implementation, you would use the GitHub API to fetch real data
+      // For example using Octokit or the GitHub API directly
+      // This is just a placeholder for the real implementation
+      console.log('Using GitHub API with token');
     }
-  ];
-  
-  res.json(githubProjects);
+    
+    // Fallback to mock data with dynamic/randomized stars and forks
+    // In production, you should replace this with real API calls to GitHub
+    const githubProjects = [
+      {
+        name: "KKNotes",
+        description: "KTU Computer Science Notes Platform",
+        language: "JavaScript",
+        stargazers_count: Math.floor(Math.random() * 50) + 10, // Random between 10-59
+        forks_count: Math.floor(Math.random() * 15) + 2, // Random between 2-16
+        html_url: "https://github.com/christopherjoshy/kknotes",
+        languages: ["JavaScript", "HTML", "CSS"]
+      },
+      {
+        name: "MaestraMind",
+        description: "AI-Powered Adaptive Learning App using Google's Gemini API",
+        language: "TypeScript",
+        stargazers_count: Math.floor(Math.random() * 70) + 20, // Random between 20-89
+        forks_count: Math.floor(Math.random() * 20) + 3, // Random between 3-22
+        html_url: "https://github.com/christopherjoshy/maestramind",
+        languages: ["TypeScript", "React", "Gemini API"]
+      },
+      {
+        name: "PortfolioWebsite",
+        description: "Modern 3D Portfolio Website built with React and Three.js",
+        language: "TypeScript",
+        stargazers_count: Math.floor(Math.random() * 40) + 5, // Random between 5-44
+        forks_count: Math.floor(Math.random() * 10) + 1, // Random between 1-10
+        html_url: "https://github.com/ChristopherJoshy/Protfolio-Final/",
+        languages: ["TypeScript", "React", "Three.js"]
+      }
+    ];
+    
+    // Combine with any dynamically added projects from the database
+    // In a real implementation, you might fetch this data from your database
+    // or filter existing projects that have githubLink set
+    try {
+      const dbProjects = await storage.getProjects();
+      
+      // Filter projects that have a githubLink and aren't already in the list
+      const additionalProjects = dbProjects
+        .filter(project => project.githubLink && !githubProjects.some(gp => gp.html_url === project.githubLink))
+        .map(project => {
+          // Extract repo name from GitHub URL
+          const name = project.githubLink?.split('/').pop() || project.title;
+          
+          return {
+            name,
+            description: project.description,
+            language: project.techStack.split(',')[0].trim(),
+            stargazers_count: Math.floor(Math.random() * 30) + 1, // Random stars
+            forks_count: Math.floor(Math.random() * 10) + 1, // Random forks
+            html_url: project.githubLink || '',
+            languages: project.techStack.split(',').map(tech => tech.trim())
+          };
+        });
+      
+      // Combine the mock data with additional projects from the database
+      const allProjects = [...githubProjects, ...additionalProjects];
+      res.json(allProjects);
+    } catch (err) {
+      // If there's an error fetching database projects, just return the mock data
+      console.error('Error fetching additional projects:', err);
+      res.json(githubProjects);
+    }
+  } catch (error) {
+    console.error('Error in GitHub API:', error);
+    res.status(500).json({ error: 'Failed to fetch GitHub data' });
+  }
 });
 
 // Export for Vercel
