@@ -84,14 +84,3 @@ To run the project locally:
 2. Install dependencies: `npm install`
 3. Start the development server: `npm run dev`
 4. Open http://localhost:5000 in your browser
-
-## Admin Login
-
-- Username: admin
-- Password: password
-
-*Note: In a production environment, you should change these credentials and implement proper authentication.*
-
-## License
-
-MIT
