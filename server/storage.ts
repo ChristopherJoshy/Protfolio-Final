@@ -230,11 +230,5 @@ export class MemStorage implements IStorage {
   }
 }
 
-// Choose the storage implementation based on the environment
-// Use MemStorage for development and DbStorage for production on Vercel
-// const isProduction = process.env.NODE_ENV === 'production';
-// const useDbStorage = isProduction && (process.env.DATABASE_URL || process.env.VERCEL_ENV);
-
-// Always use database storage with our hardcoded connection string
 console.log('🔌 Initializing database storage connection...');
 export const storage = new DbStorage();
