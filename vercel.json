@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "buildCommand": "./build.sh",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "outputDirectory": "dist/public",
+  "functions": {
+    "api/**/*": {
+      "memory": 1024
+    }
+  },
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/$1" },
+    { "source": "/(.*)", "destination": "/" }
+  ]
+}
