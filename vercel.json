@@ -2,7 +2,7 @@
   "version": 2,
   "framework": "vite",
   "installCommand": "npm install",
-  "buildCommand": "npm run build",
+  "buildCommand": "./build.sh",
   "outputDirectory": "dist",
   "rewrites": [
     { "source": "/api/projects", "destination": "/api/projects" },
