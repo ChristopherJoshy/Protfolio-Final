@@ -1,5 +1,5 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import { validateEnv } from './_env';
+import { validateEnv } from './_env.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   console.log(`[DEBUG] ${req.method} /api/debug - Request received`);

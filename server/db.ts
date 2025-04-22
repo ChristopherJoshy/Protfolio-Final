@@ -4,11 +4,17 @@ import { neon } from '@neondatabase/serverless';
 import { users, projects, certificates, messages } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 
-if (!process.env.DATABASE_URL) {
+// Get DB connection string with fallback
+const DATABASE_URL = process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_IUcurO9YfXP1@ep-broad-star-a49b8m9i-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require';
+
+if (!DATABASE_URL) {
+  console.error('⚠️ Both environment variable and fallback DATABASE_URL are not available');
   throw new Error('DATABASE_URL is not set in environment variables');
 }
 
-const client = neon(process.env.DATABASE_URL);
+console.log('✅ Using database URL:', DATABASE_URL.includes('postgresql://') ? 'Valid PostgreSQL URL' : 'Invalid URL format');
+
+const client = neon(DATABASE_URL);
 export const db = drizzle(client);
 
 console.log('✅ Database connection initialized successfully');
