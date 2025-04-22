@@ -184,78 +184,52 @@ app.delete('/api/messages/:id', async (req: Request, res: Response) => {
 // GitHub endpoint with dynamic data
 app.get('/api/github', async (_req: Request, res: Response) => {
   try {
-    // Try to fetch real GitHub data if GitHub token is available
-    if (process.env.GITHUB_TOKEN) {
-      // In a real implementation, you would use the GitHub API to fetch real data
-      // For example using Octokit or the GitHub API directly
-      // This is just a placeholder for the real implementation
-      console.log('Using GitHub API with token');
-    }
-    
-    // Fallback to mock data with dynamic/randomized stars and forks
-    // In production, you should replace this with real API calls to GitHub
-    const githubProjects = [
-      {
-        name: "KKNotes",
-        description: "KTU Computer Science Notes Platform",
-        language: "JavaScript",
-        stargazers_count: Math.floor(Math.random() * 50) + 10, // Random between 10-59
-        forks_count: Math.floor(Math.random() * 15) + 2, // Random between 2-16
-        html_url: "https://github.com/christopherjoshy/kknotes",
-        languages: ["JavaScript", "HTML", "CSS"]
-      },
-      {
-        name: "MaestraMind",
-        description: "AI-Powered Adaptive Learning App using Google's Gemini API",
-        language: "TypeScript",
-        stargazers_count: Math.floor(Math.random() * 70) + 20, // Random between 20-89
-        forks_count: Math.floor(Math.random() * 20) + 3, // Random between 3-22
-        html_url: "https://github.com/christopherjoshy/maestramind",
-        languages: ["TypeScript", "React", "Gemini API"]
-      },
-      {
-        name: "PortfolioWebsite",
-        description: "Modern 3D Portfolio Website built with React and Three.js",
-        language: "TypeScript",
-        stargazers_count: Math.floor(Math.random() * 40) + 5, // Random between 5-44
-        forks_count: Math.floor(Math.random() * 10) + 1, // Random between 1-10
-        html_url: "https://github.com/ChristopherJoshy/Protfolio-Final/",
-        languages: ["TypeScript", "React", "Three.js"]
+    const GITHUB_TOKEN = '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';
+
+    const response = await fetch('https://api.github.com/user/repos', {
+      headers: {
+        'Authorization': `token ${GITHUB_TOKEN}`,
+        'Accept': 'application/vnd.github.v3+json'
       }
-    ];
-    
-    // Combine with any dynamically added projects from the database
-    // In a real implementation, you might fetch this data from your database
-    // or filter existing projects that have githubLink set
-    try {
-      const dbProjects = await storage.getProjects();
-      
-      // Filter projects that have a githubLink and aren't already in the list
-      const additionalProjects = dbProjects
-        .filter(project => project.githubLink && !githubProjects.some(gp => gp.html_url === project.githubLink))
-        .map(project => {
-          // Extract repo name from GitHub URL
-          const name = project.githubLink?.split('/').pop() || project.title;
-          
-          return {
-            name,
-            description: project.description,
-            language: project.techStack.split(',')[0].trim(),
-            stargazers_count: Math.floor(Math.random() * 30) + 1, // Random stars
-            forks_count: Math.floor(Math.random() * 10) + 1, // Random forks
-            html_url: project.githubLink || '',
-            languages: project.techStack.split(',').map(tech => tech.trim())
-          };
-        });
-      
-      // Combine the mock data with additional projects from the database
-      const allProjects = [...githubProjects, ...additionalProjects];
-      res.json(allProjects);
-    } catch (err) {
-      // If there's an error fetching database projects, just return the mock data
-      console.error('Error fetching additional projects:', err);
-      res.json(githubProjects);
+    });
+
+    if (!response.ok) {
+      throw new Error(`GitHub API error: ${response.statusText}`);
     }
+
+    const repos = await response.json();
+    
+    // Transform the response to match our frontend needs
+    const formattedRepos = repos.map((repo: any) => ({
+      name: repo.name,
+      description: repo.description || 'No description available',
+      language: repo.language || 'Unknown',
+      stargazers_count: repo.stargazers_count,
+      forks_count: repo.forks_count,
+      html_url: repo.html_url,
+      languages: [repo.language].filter(Boolean) // Start with primary language
+    }));
+
+    // Get languages for each repo
+    const reposWithLanguages = await Promise.all(
+      formattedRepos.map(async (repo: any) => {
+        const languagesResponse = await fetch(repo.languages_url, {
+          headers: {
+            'Authorization': `token ${GITHUB_TOKEN}`,
+            'Accept': 'application/vnd.github.v3+json'
+          }
+        });
+
+        if (languagesResponse.ok) {
+          const languages = await languagesResponse.json();
+          repo.languages = Object.keys(languages);
+        }
+
+        return repo;
+      })
+    );
+
+    res.json(reposWithLanguages);
   } catch (error) {
     console.error('Error in GitHub API:', error);
     res.status(500).json({ error: 'Failed to fetch GitHub data' });

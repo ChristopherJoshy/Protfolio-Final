@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { BackgroundAnimation } from '@/lib/three/background';
+import { WebGLManager } from '@/lib/three/WebGLManager';
 
 interface ThreeBackgroundProps {
   className?: string;
@@ -20,10 +21,7 @@ const ThreeBackground = ({ className = '' }: ThreeBackgroundProps) => {
       (entries) => {
         const [entry] = entries;
         
-        // If component has been out of view for a while and we have an animation
         if (!entry.isIntersecting && animationRef.current) {
-          // If it's Firefox, completely unload the animation after 5 seconds
-          // This helps prevent memory issues when the user scrolls away
           if (isFirefox) {
             const timeout = setTimeout(() => {
               if (animationRef.current && !unloaded) {
@@ -36,17 +34,13 @@ const ThreeBackground = ({ className = '' }: ThreeBackgroundProps) => {
             
             return () => clearTimeout(timeout);
           } else {
-            // For other browsers, just pause the animation
             animationRef.current.pause();
           }
         } else if (entry.isIntersecting) {
-          // When coming back into view
           if (animationRef.current) {
             animationRef.current.resume();
           } else if (unloaded) {
-            // If we previously unloaded, we need to reload
             setUnloaded(false);
-            // Reloading will happen in the main effect below
           }
         }
       },
@@ -64,50 +58,41 @@ const ThreeBackground = ({ className = '' }: ThreeBackgroundProps) => {
 
   // Main effect to initialize the animation
   useEffect(() => {
-    // Detect Firefox
     const isFF = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
     setIsFirefox(isFF);
     
-    // Check for reduced motion preference
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     setReducedMotion(prefersReducedMotion);
     
-    // If already unloaded or no container, don't initialize
     if (unloaded || !containerRef.current || (isFF && localStorage.getItem('enable-particles') !== 'true')) {
       return;
     }
     
-    // Use a lower particle count for Firefox
     const options = {
       particleCount: isFF ? 400 : 800,
-      frameRate: isFF ? 20 : 30, // Lower framerate for Firefox
+      frameRate: isFF ? 20 : 30,
       disableMouseTracking: isFF
     };
     
     try {
-      // Destroy any existing animation
       if (animationRef.current) {
         animationRef.current.cleanup();
       }
       
-      // Create new animation
       animationRef.current = new BackgroundAnimation(containerRef.current, options);
       
-      // Force garbage collection occasionally on Firefox (helps prevent memory buildup)
       let gcInterval: number | null = null;
       if (isFF) {
         gcInterval = window.setInterval(() => {
           if (animationRef.current) {
-            // Temporarily pause animation
             animationRef.current.pause();
-            // Resume after a short delay to allow GC to happen
             setTimeout(() => {
               if (animationRef.current) {
                 animationRef.current.resume();
               }
             }, 50);
           }
-        }, 30000); // Every 30 seconds
+        }, 30000);
       }
       
       return () => {
@@ -125,7 +110,16 @@ const ThreeBackground = ({ className = '' }: ThreeBackgroundProps) => {
     }
   }, [unloaded]);
 
-  // For Firefox, offer a static background instead of particles to avoid crashes
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (animationRef.current) {
+        animationRef.current.cleanup();
+        animationRef.current = null;
+      }
+    };
+  }, []);
+
   if (isFirefox && localStorage.getItem('enable-particles') !== 'true') {
     return (
       <div className={`absolute inset-0 ${className}`}>
@@ -134,7 +128,6 @@ const ThreeBackground = ({ className = '' }: ThreeBackgroundProps) => {
                style={{ backgroundImage: 'radial-gradient(#6366f1 1px, transparent 1px)', backgroundSize: '30px 30px' }}>
           </div>
         </div>
-        {/* Optional toggle button to enable particles */}
         <button 
           onClick={() => {
             localStorage.setItem('enable-particles', 'true');
@@ -148,7 +141,6 @@ const ThreeBackground = ({ className = '' }: ThreeBackgroundProps) => {
     );
   }
 
-  // For users with reduced motion preference
   if (reducedMotion) {
     return (
       <div className={`absolute inset-0 ${className}`}>

@@ -50,51 +50,55 @@ const Sidebar = () => {
       <nav className="flex-1 py-4 overflow-y-auto">
         <ul className="space-y-1 px-2">
           <li>
-            <Link href="/admin/dashboard">
-              <a className={`flex items-center gap-2 p-2 rounded-lg transition-colors duration-200 ${
+            <Link 
+              href="/admin/dashboard"
+              className={`flex items-center gap-2 p-2 rounded-lg transition-colors duration-200 ${
                 isActive("/admin/dashboard") 
                   ? "bg-primary-600 text-white" 
                   : "text-gray-300 hover:bg-gray-700"
-              }`}>
-                <i className="ri-dashboard-line text-lg"></i>
-                {!collapsed && <span>Dashboard</span>}
-              </a>
+              }`}
+            >
+              <i className="ri-dashboard-line text-lg"></i>
+              {!collapsed && <span>Dashboard</span>}
             </Link>
           </li>
           <li>
-            <Link href="/admin/projects">
-              <a className={`flex items-center gap-2 p-2 rounded-lg transition-colors duration-200 ${
+            <Link 
+              href="/admin/projects"
+              className={`flex items-center gap-2 p-2 rounded-lg transition-colors duration-200 ${
                 isActive("/admin/projects") 
                   ? "bg-primary-600 text-white" 
                   : "text-gray-300 hover:bg-gray-700"
-              }`}>
-                <i className="ri-folder-line text-lg"></i>
-                {!collapsed && <span>Projects</span>}
-              </a>
+              }`}
+            >
+              <i className="ri-folder-line text-lg"></i>
+              {!collapsed && <span>Projects</span>}
             </Link>
           </li>
           <li>
-            <Link href="/admin/certificates">
-              <a className={`flex items-center gap-2 p-2 rounded-lg transition-colors duration-200 ${
+            <Link 
+              href="/admin/certificates"
+              className={`flex items-center gap-2 p-2 rounded-lg transition-colors duration-200 ${
                 isActive("/admin/certificates") 
                   ? "bg-primary-600 text-white" 
                   : "text-gray-300 hover:bg-gray-700"
-              }`}>
-                <i className="ri-award-line text-lg"></i>
-                {!collapsed && <span>Certificates</span>}
-              </a>
+              }`}
+            >
+              <i className="ri-award-line text-lg"></i>
+              {!collapsed && <span>Certificates</span>}
             </Link>
           </li>
           <li>
-            <Link href="/admin/messages">
-              <a className={`flex items-center gap-2 p-2 rounded-lg transition-colors duration-200 ${
+            <Link 
+              href="/admin/messages"
+              className={`flex items-center gap-2 p-2 rounded-lg transition-colors duration-200 ${
                 isActive("/admin/messages") 
                   ? "bg-primary-600 text-white" 
                   : "text-gray-300 hover:bg-gray-700"
-              }`}>
-                <i className="ri-mail-line text-lg"></i>
-                {!collapsed && <span>Messages</span>}
-              </a>
+              }`}
+            >
+              <i className="ri-mail-line text-lg"></i>
+              {!collapsed && <span>Messages</span>}
             </Link>
           </li>
         </ul>

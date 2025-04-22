@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -45,6 +45,16 @@ export const messages = pgTable("messages", {
   read: boolean("read").default(false).notNull(),
 });
 
+// Page views table
+export const pageViews = pgTable('page_views', {
+  id: serial('id').primaryKey(),
+  path: varchar('path', { length: 255 }).notNull(),
+  timestamp: timestamp('timestamp').defaultNow().notNull(),
+  userAgent: text('user_agent'),
+  referrer: text('referrer'),
+  ipAddress: varchar('ip_address', { length: 45 }),
+});
+
 // Create insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -67,6 +77,11 @@ export const insertMessageSchema = createInsertSchema(messages).omit({
   read: true,
 });
 
+export const insertPageViewSchema = createInsertSchema(pageViews).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Export types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -79,3 +94,6 @@ export type Certificate = typeof certificates.$inferSelect;
 
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type Message = typeof messages.$inferSelect;
+
+export type PageView = typeof pageViews.$inferSelect;
+export type InsertPageView = typeof pageViews.$inferInsert;

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { WebGLManager } from './WebGLManager';
 
 // Define options interface
 export interface BackgroundOptions {
@@ -26,14 +27,20 @@ export class BackgroundAnimation {
   private memoryWarningCount = 0;
   private lastMemoryCheck = 0;
   private isFirefox = false;
+  private webGLManager: WebGLManager;
+  private contextId: string;
   
   constructor(container: HTMLElement, options: BackgroundOptions = {}) {
+    // Get WebGL manager instance
+    this.webGLManager = WebGLManager.getInstance();
+    this.contextId = 'background-' + Math.random().toString(36).substr(2, 9);
+    
     // Detect Firefox
     this.isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
     
     // Set options with defaults
     const particleCount = options.particleCount || (this.isMobile ? 500 : 800);
-    this.frameRateLimiter = 1000 / (options.frameRate || 30); // Default to 30 FPS
+    this.frameRateLimiter = 1000 / (options.frameRate || 30);
     this.disableMouseTracking = !!options.disableMouseTracking;
     
     // Check if mobile device for reduced effects
@@ -51,20 +58,13 @@ export class BackgroundAnimation {
     );
     this.camera.position.z = 30;
     
-    // Create renderer with precision optimization
-    this.renderer = new THREE.WebGLRenderer({ 
-      antialias: false, // Disable antialiasing for performance
+    // Create renderer using WebGLManager
+    this.renderer = this.webGLManager.createContext(this.contextId, container, {
+      antialias: false,
       alpha: true,
       powerPreference: 'high-performance',
-      precision: this.isMobile ? 'lowp' : 'mediump' // Lower precision on mobile
+      precision: this.isMobile ? 'lowp' : 'mediump'
     });
-    this.renderer.setSize(container.clientWidth, container.clientHeight);
-    
-    // Lower pixel ratio for better performance
-    const pixelRatio = Math.min(window.devicePixelRatio, 1.5);
-    this.renderer.setPixelRatio(pixelRatio);
-    
-    container.appendChild(this.renderer.domElement);
     
     // Create particles with reduced count
     const particlesGeometry = new THREE.BufferGeometry();
@@ -83,7 +83,7 @@ export class BackgroundAnimation {
       transparent: true,
       opacity: 0.7,
       blending: THREE.AdditiveBlending,
-      depthWrite: false // Performance optimization
+      depthWrite: false
     });
     
     this.particles = new THREE.Points(particlesGeometry, particlesMaterial);
@@ -92,17 +92,14 @@ export class BackgroundAnimation {
     // Add event listeners with passive option for better performance
     window.addEventListener('resize', this.handleResize, { passive: true });
     
-    // Only add mousemove on desktop (not mobile) and if not disabled
     if (!this.isMobile && !this.disableMouseTracking) {
       document.addEventListener('mousemove', this.handleMouseMove, { passive: true });
     }
     
     // Monitor for potential memory issues in Firefox
     if (this.isFirefox) {
-      // Initial reduced refresh rate for Firefox
-      this.frameRateLimiter = 1000 / 15; // 15 FPS for Firefox
+      this.frameRateLimiter = 1000 / 15;
       
-      // Add visibility change listener to pause animation when tab is not visible
       document.addEventListener('visibilitychange', () => {
         if (document.hidden) {
           this.pause();
@@ -235,7 +232,6 @@ export class BackgroundAnimation {
   cleanup = () => {
     if (this.animationId !== null) {
       cancelAnimationFrame(this.animationId);
-      this.animationId = null;
     }
     
     window.removeEventListener('resize', this.handleResize);
@@ -243,7 +239,6 @@ export class BackgroundAnimation {
       document.removeEventListener('mousemove', this.handleMouseMove);
     }
     
-    // Remove visibility change listener if we added it
     if (this.isFirefox) {
       document.removeEventListener('visibilitychange', () => {});
     }
@@ -252,11 +247,8 @@ export class BackgroundAnimation {
     this.scene.remove(this.particles);
     (this.particles.geometry as THREE.BufferGeometry).dispose();
     (this.particles.material as THREE.Material).dispose();
-    this.renderer.dispose();
     
-    // Remove the domElement only if it's still in the DOM
-    if (this.renderer.domElement.parentElement) {
-      this.renderer.domElement.remove();
-    }
+    // Use WebGLManager to dispose context
+    this.webGLManager.disposeContext(this.contextId);
   };
 }

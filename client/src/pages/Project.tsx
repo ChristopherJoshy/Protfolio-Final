@@ -19,6 +19,10 @@ const ProjectPage = () => {
     enabled: !!projectId,
   });
   
+  const { data: allProjects = [] } = useQuery<Project[]>({
+    queryKey: ['/api/projects'],
+  });
+  
   if (isLoading) {
     return (
       <>
@@ -241,14 +245,19 @@ const ProjectPage = () => {
                     <div className="pt-2">
                       <h3 className="text-lg font-medium mb-3">Related Projects</h3>
                       <div className="space-y-3">
-                        <a href="#" className="block p-3 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors duration-300">
-                          <h4 className="font-medium">{project.title.includes('KKNotes') ? 'MaestraMind' : 'KKNotesV2'}</h4>
-                          <p className="text-sm text-gray-300">{project.title.includes('KKNotes') ? 'AI-Powered Learning' : 'CS Study Platform'}</p>
-                        </a>
-                        <a href="#" className="block p-3 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors duration-300">
-                          <h4 className="font-medium">Portfolio Website</h4>
-                          <p className="text-sm text-gray-300">Personal Showcase</p>
-                        </a>
+                        {allProjects
+                          .filter(p => p.id !== project.id) // Exclude current project
+                          .slice(0, 2) // Show only 2 related projects
+                          .map(relatedProject => (
+                            <Link 
+                              key={relatedProject.id} 
+                              href={`/project/${relatedProject.id}`}
+                              className="block p-3 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors duration-300"
+                            >
+                              <h4 className="font-medium">{relatedProject.title}</h4>
+                              <p className="text-sm text-gray-300">{relatedProject.description}</p>
+                            </Link>
+                          ))}
                       </div>
                     </div>
                     

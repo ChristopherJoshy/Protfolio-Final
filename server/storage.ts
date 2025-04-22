@@ -1,232 +1,323 @@
+import { drizzle } from 'drizzle-orm/neon-http';
+import { neon } from '@neondatabase/serverless';
+import { eq, and, gte, lte, count, sql } from 'drizzle-orm';
 import { 
   users, type User, type InsertUser,
   projects, type Project, type InsertProject,
   certificates, type Certificate, type InsertCertificate,
-  messages, type Message, type InsertMessage
+  messages, type Message, type InsertMessage,
+  pageViews, type PageView, type InsertPageView
 } from "@shared/schema";
-import { DbStorage } from "./db-storage";
+import { IStorage } from './storage-interface';
 
-export interface IStorage {
-  // User operations
-  getUser(id: number): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+export class DbStorage implements IStorage {
+  private db;
   
-  // Project operations
-  getProjects(): Promise<Project[]>;
-  getProject(id: number): Promise<Project | undefined>;
-  createProject(project: InsertProject): Promise<Project>;
-  updateProject(id: number, project: Partial<InsertProject>): Promise<Project | undefined>;
-  deleteProject(id: number): Promise<boolean>;
-  getFeaturedProjects(): Promise<Project[]>;
-  
-  // Certificate operations
-  getCertificates(): Promise<Certificate[]>;
-  getCertificate(id: number): Promise<Certificate | undefined>;
-  createCertificate(certificate: InsertCertificate): Promise<Certificate>;
-  updateCertificate(id: number, certificate: Partial<InsertCertificate>): Promise<Certificate | undefined>;
-  deleteCertificate(id: number): Promise<boolean>;
-  
-  // Message operations
-  getMessages(): Promise<Message[]>;
-  getMessage(id: number): Promise<Message | undefined>;
-  createMessage(message: InsertMessage): Promise<Message>;
-  markMessageAsRead(id: number): Promise<boolean>;
-  deleteMessage(id: number): Promise<boolean>;
-}
-
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private projects: Map<number, Project>;
-  private certificates: Map<number, Certificate>;
-  private messages: Map<number, Message>;
-  private userId: number;
-  private projectId: number;
-  private certificateId: number;
-  private messageId: number;
-
   constructor() {
-    this.users = new Map();
-    this.projects = new Map();
-    this.certificates = new Map();
-    this.messages = new Map();
-    this.userId = 1;
-    this.projectId = 1;
-    this.certificateId = 1;
-    this.messageId = 1;
+    // Create a neon client with the connection string
+    const connectionString = 'postgresql://neondb_owner:npg_IUcurO9YfXP1@ep-broad-star-a49b8m9i-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require';
+    const client = neon(connectionString);
     
-    // Initialize with sample projects for development
-    this.initSampleData();
-  }
-
-  private initSampleData() {
-    const now = new Date();
-    
-    // Add sample projects
-    this.createProject({
-      title: "KKNotesV2",
-      description: "A premium resource hub for KTU Computer Science Engineering study materials featuring high-quality notes and curated video tutorials.",
-      techStack: "JavaScript, HTML, CSS",
-      imageUrl: null,
-      demoLink: "https://christopherjoshy.github.io/KKNotesV2/",
-      githubLink: "https://github.com/ChristopherJoshy/KKNotes",
-      featured: true,
-    });
-    
-    this.createProject({
-      title: "MaestraMind",
-      description: "An AI-powered adaptive learning web application that transforms study notes into personalized learning experiences using Google's Gemini API.",
-      techStack: "JavaScript, HTML/CSS, Firebase, Gemini API",
-      imageUrl: null,
-      demoLink: "https://christopherjoshy.github.io/MaestraMind/",
-      githubLink: "https://github.com/ChristopherJoshy/MaestraMind",
-      featured: true,
-    });
-
-    // Add sample certificates
-    this.createCertificate({
-      title: "AWS Cloud Practitioner",
-      issuer: "Amazon Web Services",
-      date: "June 2023",
-      credentialUrl: "https://aws.amazon.com/certification/certified-cloud-practitioner/",
-      imageUrl: null
-    });
-
-    this.createCertificate({
-      title: "React.js Developer",
-      issuer: "Meta",
-      date: "September 2023",
-      credentialUrl: "https://www.coursera.org/professional-certificates/meta-front-end-developer",
-      imageUrl: null
-    });
+    // Pass the client to drizzle correctly using the HTTP adapter
+    this.db = drizzle(client);
+    console.log('🔌 DbStorage: Database connection established');
   }
 
   // User operations
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    try {
+      const result = await this.db.select().from(users).where(eq(users.id, id)).limit(1);
+      return result.length > 0 ? result[0] : undefined;
+    } catch (error) {
+      console.error('❌ DbStorage: Error getting user:', error);
+      throw error;
+    }
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username
-    );
+    try {
+      const result = await this.db.select().from(users).where(eq(users.username, username)).limit(1);
+      return result.length > 0 ? result[0] : undefined;
+    } catch (error) {
+      console.error('❌ DbStorage: Error getting user by username:', error);
+      throw error;
+    }
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.userId++;
-    const user: User = { ...insertUser, id, isAdmin: false };
-    this.users.set(id, user);
-    return user;
+  async createUser(user: InsertUser): Promise<User> {
+    try {
+      const result = await this.db.insert(users).values(user).returning();
+      console.log('✅ DbStorage: User created successfully');
+      return result[0];
+    } catch (error) {
+      console.error('❌ DbStorage: Error creating user:', error);
+      throw error;
+    }
   }
 
   // Project operations
   async getProjects(): Promise<Project[]> {
-    return Array.from(this.projects.values());
+    try {
+      const projectsList = await this.db.select().from(projects).orderBy(projects.createdAt);
+      console.log(`✅ DbStorage: Retrieved ${projectsList.length} projects from database`);
+      return projectsList;
+    } catch (error) {
+      console.error('❌ DbStorage: Error getting projects:', error);
+      throw error;
+    }
   }
 
   async getProject(id: number): Promise<Project | undefined> {
-    return this.projects.get(id);
+    try {
+      const result = await this.db.select().from(projects).where(eq(projects.id, id)).limit(1);
+      return result.length > 0 ? result[0] : undefined;
+    } catch (error) {
+      console.error('❌ DbStorage: Error getting project:', error);
+      throw error;
+    }
   }
 
-  async createProject(insertProject: InsertProject): Promise<Project> {
-    const id = this.projectId++;
-    const project: Project = { 
-      ...insertProject, 
-      id, 
-      createdAt: new Date(),
-      imageUrl: insertProject.imageUrl ?? null,
-      demoLink: insertProject.demoLink ?? null,
-      githubLink: insertProject.githubLink ?? null,
-      featured: insertProject.featured ?? false
-    };
-    this.projects.set(id, project);
-    return project;
+  async createProject(project: InsertProject): Promise<Project> {
+    try {
+      const result = await this.db.insert(projects).values(project).returning();
+      console.log('✅ DbStorage: Project created successfully', result[0].title);
+      return result[0];
+    } catch (error) {
+      console.error('❌ DbStorage: Error creating project:', error);
+      throw error;
+    }
   }
 
-  async updateProject(id: number, projectUpdate: Partial<InsertProject>): Promise<Project | undefined> {
-    const project = this.projects.get(id);
-    if (!project) return undefined;
-    
-    const updatedProject = { ...project, ...projectUpdate };
-    this.projects.set(id, updatedProject);
-    return updatedProject;
+  async updateProject(id: number, project: Partial<InsertProject>): Promise<Project | undefined> {
+    try {
+      const result = await this.db.update(projects).set(project).where(eq(projects.id, id)).returning();
+      if (result.length > 0) {
+        console.log('✅ DbStorage: Project updated successfully', result[0].title);
+      }
+      return result.length > 0 ? result[0] : undefined;
+    } catch (error) {
+      console.error('❌ DbStorage: Error updating project:', error);
+      throw error;
+    }
   }
 
   async deleteProject(id: number): Promise<boolean> {
-    return this.projects.delete(id);
+    try {
+      const result = await this.db.delete(projects).where(eq(projects.id, id)).returning();
+      if (result.length > 0) {
+        console.log('✅ DbStorage: Project deleted successfully', id);
+      }
+      return result.length > 0;
+    } catch (error) {
+      console.error('❌ DbStorage: Error deleting project:', error);
+      throw error;
+    }
   }
 
   async getFeaturedProjects(): Promise<Project[]> {
-    return Array.from(this.projects.values()).filter(project => project.featured);
+    try {
+      const featuredProjects = await this.db.select().from(projects).where(eq(projects.featured, true)).orderBy(projects.createdAt);
+      console.log(`✅ DbStorage: Retrieved ${featuredProjects.length} featured projects`);
+      return featuredProjects;
+    } catch (error) {
+      console.error('❌ DbStorage: Error getting featured projects:', error);
+      throw error;
+    }
   }
 
   // Certificate operations
   async getCertificates(): Promise<Certificate[]> {
-    return Array.from(this.certificates.values());
+    try {
+      const certificatesList = await this.db.select().from(certificates).orderBy(certificates.createdAt);
+      console.log(`✅ DbStorage: Retrieved ${certificatesList.length} certificates from database`);
+      return certificatesList;
+    } catch (error) {
+      console.error('❌ DbStorage: Error getting certificates:', error);
+      throw error;
+    }
   }
 
   async getCertificate(id: number): Promise<Certificate | undefined> {
-    return this.certificates.get(id);
+    try {
+      const result = await this.db.select().from(certificates).where(eq(certificates.id, id)).limit(1);
+      return result.length > 0 ? result[0] : undefined;
+    } catch (error) {
+      console.error('❌ DbStorage: Error getting certificate:', error);
+      throw error;
+    }
   }
 
-  async createCertificate(insertCertificate: InsertCertificate): Promise<Certificate> {
-    const id = this.certificateId++;
-    const certificate: Certificate = { 
-      ...insertCertificate, 
-      id, 
-      createdAt: new Date(),
-      imageUrl: insertCertificate.imageUrl ?? null,
-      credentialUrl: insertCertificate.credentialUrl ?? null
-    };
-    this.certificates.set(id, certificate);
-    return certificate;
+  async createCertificate(certificate: InsertCertificate): Promise<Certificate> {
+    try {
+      const result = await this.db.insert(certificates).values(certificate).returning();
+      console.log('✅ DbStorage: Certificate created successfully', result[0].title);
+      return result[0];
+    } catch (error) {
+      console.error('❌ DbStorage: Error creating certificate:', error);
+      throw error;
+    }
   }
 
-  async updateCertificate(id: number, certificateUpdate: Partial<InsertCertificate>): Promise<Certificate | undefined> {
-    const certificate = this.certificates.get(id);
-    if (!certificate) return undefined;
-    
-    const updatedCertificate = { ...certificate, ...certificateUpdate };
-    this.certificates.set(id, updatedCertificate);
-    return updatedCertificate;
+  async updateCertificate(id: number, certificate: Partial<InsertCertificate>): Promise<Certificate | undefined> {
+    try {
+      const result = await this.db.update(certificates).set(certificate).where(eq(certificates.id, id)).returning();
+      if (result.length > 0) {
+        console.log('✅ DbStorage: Certificate updated successfully', result[0].title);
+      }
+      return result.length > 0 ? result[0] : undefined;
+    } catch (error) {
+      console.error('❌ DbStorage: Error updating certificate:', error);
+      throw error;
+    }
   }
 
   async deleteCertificate(id: number): Promise<boolean> {
-    return this.certificates.delete(id);
+    try {
+      const result = await this.db.delete(certificates).where(eq(certificates.id, id)).returning();
+      if (result.length > 0) {
+        console.log('✅ DbStorage: Certificate deleted successfully', id);
+      }
+      return result.length > 0;
+    } catch (error) {
+      console.error('❌ DbStorage: Error deleting certificate:', error);
+      throw error;
+    }
   }
 
   // Message operations
   async getMessages(): Promise<Message[]> {
-    return Array.from(this.messages.values());
+    try {
+      const messagesList = await this.db.select().from(messages).orderBy(messages.createdAt);
+      console.log(`✅ DbStorage: Retrieved ${messagesList.length} messages from database`);
+      return messagesList;
+    } catch (error) {
+      console.error('❌ DbStorage: Error getting messages:', error);
+      throw error;
+    }
   }
 
-  async getMessage(id: number): Promise<Message | undefined> {
-    return this.messages.get(id);
+  async getMessage(id: number): Promise<Message | null> {
+    try {
+      const result = await this.db.select().from(messages).where(eq(messages.id, id)).limit(1);
+      return result.length > 0 ? result[0] : null;
+    } catch (error) {
+      console.error('❌ DbStorage: Error getting message:', error);
+      throw error;
+    }
   }
 
-  async createMessage(insertMessage: InsertMessage): Promise<Message> {
-    const id = this.messageId++;
-    const message: Message = { 
-      ...insertMessage, 
-      id, 
-      createdAt: new Date(),
-      read: false 
-    };
-    this.messages.set(id, message);
-    return message;
+  async createMessage(message: InsertMessage): Promise<Message> {
+    try {
+      const result = await this.db.insert(messages).values(message).returning();
+      console.log('✅ DbStorage: Message created successfully from', result[0].email);
+      return result[0];
+    } catch (error) {
+      console.error('❌ DbStorage: Error creating message:', error);
+      throw error;
+    }
   }
 
   async markMessageAsRead(id: number): Promise<boolean> {
-    const message = this.messages.get(id);
-    if (!message) return false;
-    
-    message.read = true;
-    this.messages.set(id, message);
-    return true;
+    try {
+      const result = await this.db.update(messages).set({ read: true }).where(eq(messages.id, id)).returning();
+      if (result.length > 0) {
+        console.log('✅ DbStorage: Message marked as read', id);
+      }
+      return result.length > 0;
+    } catch (error) {
+      console.error('❌ DbStorage: Error marking message as read:', error);
+      throw error;
+    }
   }
 
   async deleteMessage(id: number): Promise<boolean> {
-    return this.messages.delete(id);
+    try {
+      const result = await this.db.delete(messages).where(eq(messages.id, id)).returning();
+      if (result.length > 0) {
+        console.log('✅ DbStorage: Message deleted successfully', id);
+      }
+      return result.length > 0;
+    } catch (error) {
+      console.error('❌ DbStorage: Error deleting message:', error);
+      throw error;
+    }
+  }
+
+  // Page views operations
+  async trackPageView(view: InsertPageView): Promise<PageView> {
+    try {
+      const result = await this.db.insert(pageViews).values(view).returning();
+      console.log('✅ DbStorage: Page view tracked successfully', result[0].path);
+      return result[0];
+    } catch (error) {
+      console.error('❌ DbStorage: Error tracking page view:', error);
+      throw error;
+    }
+  }
+
+  async getPageViews(): Promise<PageView[]> {
+    try {
+      const views = await this.db.select().from(pageViews).orderBy(pageViews.timestamp);
+      console.log(`✅ DbStorage: Retrieved ${views.length} page views`);
+      return views;
+    } catch (error) {
+      console.error('❌ DbStorage: Error getting page views:', error);
+      throw error;
+    }
+  }
+
+  async getPageViewsByPath(path: string): Promise<PageView[]> {
+    try {
+      const views = await this.db.select().from(pageViews).where(eq(pageViews.path, path)).orderBy(pageViews.timestamp);
+      console.log(`✅ DbStorage: Retrieved ${views.length} page views for path: ${path}`);
+      return views;
+    } catch (error) {
+      console.error('❌ DbStorage: Error getting page views by path:', error);
+      throw error;
+    }
+  }
+
+  async getPageViewsCount(): Promise<number> {
+    try {
+      const result = await this.db.select({ count: count() }).from(pageViews);
+      return result[0].count;
+    } catch (error) {
+      console.error('❌ DbStorage: Error getting page views count:', error);
+      throw error;
+    }
+  }
+
+  async getPageViewsCountByPath(path: string): Promise<number> {
+    try {
+      const result = await this.db
+        .select({ count: count() })
+        .from(pageViews)
+        .where(eq(pageViews.path, path));
+      return result[0].count;
+    } catch (error) {
+      console.error('❌ DbStorage: Error getting page views count by path:', error);
+      throw error;
+    }
+  }
+
+  async getPageViewsByTimeRange(startDate: Date, endDate: Date): Promise<PageView[]> {
+    try {
+      const views = await this.db
+        .select()
+        .from(pageViews)
+        .where(
+          and(
+            gte(pageViews.timestamp, startDate),
+            lte(pageViews.timestamp, endDate)
+          )
+        )
+        .orderBy(pageViews.timestamp);
+      console.log(`✅ DbStorage: Retrieved ${views.length} page views for time range`);
+      return views;
+    } catch (error) {
+      console.error('❌ DbStorage: Error getting page views by time range:', error);
+      throw error;
+    }
   }
 }
 

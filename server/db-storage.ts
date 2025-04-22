@@ -1,25 +1,19 @@
-import { drizzle } from 'drizzle-orm/neon-http';
-import { neon } from '@neondatabase/serverless';
-import { eq } from 'drizzle-orm';
+import { db } from './db';
+import { eq, count, and, gte, lte } from 'drizzle-orm';
 import { 
   users, type User, type InsertUser,
   projects, type Project, type InsertProject,
   certificates, type Certificate, type InsertCertificate,
-  messages, type Message, type InsertMessage
+  messages, type Message, type InsertMessage,
+  pageViews, type PageView, type InsertPageView
 } from "@shared/schema";
-import { IStorage } from './storage';
+import { IStorage } from './storage-interface';
 
 export class DbStorage implements IStorage {
-  private db;
-  
+  private db = db;
+
   constructor() {
-    // Create a neon client with the connection string
-    const connectionString = 'postgresql://neondb_owner:npg_IUcurO9YfXP1@ep-broad-star-a49b8m9i-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require';
-    const client = neon(connectionString);
-    
-    // Pass the client to drizzle correctly using the HTTP adapter
-    this.db = drizzle(client);
-    console.log('🔌 DbStorage: Database connection established');
+    console.log('🔌 DbStorage: Using shared database connection');
   }
 
   // User operations
@@ -195,10 +189,10 @@ export class DbStorage implements IStorage {
     }
   }
 
-  async getMessage(id: number): Promise<Message | undefined> {
+  async getMessage(id: number): Promise<Message | null> {
     try {
       const result = await this.db.select().from(messages).where(eq(messages.id, id)).limit(1);
-      return result.length > 0 ? result[0] : undefined;
+      return result.length > 0 ? result[0] : null;
     } catch (error) {
       console.error('❌ DbStorage: Error getting message:', error);
       throw error;
@@ -238,6 +232,83 @@ export class DbStorage implements IStorage {
       return result.length > 0;
     } catch (error) {
       console.error('❌ DbStorage: Error deleting message:', error);
+      throw error;
+    }
+  }
+
+  // Page views operations
+  async trackPageView(view: InsertPageView): Promise<PageView> {
+    try {
+      const result = await this.db.insert(pageViews).values(view).returning();
+      console.log('✅ DbStorage: Page view tracked successfully', result[0].path);
+      return result[0];
+    } catch (error) {
+      console.error('❌ DbStorage: Error tracking page view:', error);
+      throw error;
+    }
+  }
+
+  async getPageViews(): Promise<PageView[]> {
+    try {
+      const views = await this.db.select().from(pageViews).orderBy(pageViews.timestamp);
+      console.log(`✅ DbStorage: Retrieved ${views.length} page views`);
+      return views;
+    } catch (error) {
+      console.error('❌ DbStorage: Error getting page views:', error);
+      throw error;
+    }
+  }
+
+  async getPageViewsByPath(path: string): Promise<PageView[]> {
+    try {
+      const views = await this.db.select().from(pageViews).where(eq(pageViews.path, path)).orderBy(pageViews.timestamp);
+      console.log(`✅ DbStorage: Retrieved ${views.length} page views for path: ${path}`);
+      return views;
+    } catch (error) {
+      console.error('❌ DbStorage: Error getting page views by path:', error);
+      throw error;
+    }
+  }
+
+  async getPageViewsCount(): Promise<number> {
+    try {
+      const result = await this.db.select({ count: count() }).from(pageViews);
+      return result[0].count;
+    } catch (error) {
+      console.error('❌ DbStorage: Error getting page views count:', error);
+      throw error;
+    }
+  }
+
+  async getPageViewsCountByPath(path: string): Promise<number> {
+    try {
+      const result = await this.db
+        .select({ count: count() })
+        .from(pageViews)
+        .where(eq(pageViews.path, path));
+      return result[0].count;
+    } catch (error) {
+      console.error('❌ DbStorage: Error getting page views count by path:', error);
+      throw error;
+    }
+  }
+
+  async getPageViewsByTimeRange(startDate: Date, endDate: Date): Promise<PageView[]> {
+    try {
+      const views = await this.db
+        .select()
+        .from(pageViews)
+        .where(
+          and(
+            gte(pageViews.timestamp, startDate),
+            lte(pageViews.timestamp, endDate)
+          )
+        )
+        .orderBy(pageViews.timestamp);
+      console.log(`✅ DbStorage: Retrieved ${views.length} page views for time range`);
+      return views;
+    } catch (error) {
+      console.error('❌ DbStorage: Error getting page views by time range:', error);
       throw error;
     }
   }

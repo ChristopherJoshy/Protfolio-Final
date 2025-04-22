@@ -21,9 +21,20 @@ const SkillVisualization = ({
     return () => {
       if (visualizationRef.current) {
         visualizationRef.current.cleanup();
+        visualizationRef.current = null;
       }
     };
   }, [skills]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (visualizationRef.current) {
+        visualizationRef.current.cleanup();
+        visualizationRef.current = null;
+      }
+    };
+  }, []);
 
   return (
     <div 

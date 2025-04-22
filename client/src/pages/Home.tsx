@@ -16,6 +16,7 @@ import Footer from '@/components/Footer';
 import { apiRequest } from '@/lib/queryClient';
 import { type Project, type InsertMessage, type Certificate } from '@shared/schema';
 import CertificateCard from "@/components/CertificateCard";
+import RepositoryList from '@/components/RepositoryList';
 
 const Home = () => {
   const { toast } = useToast();
@@ -82,8 +83,9 @@ const Home = () => {
   });
   
   // Fetch GitHub repos
-  const { data: repos = [] } = useQuery<any[]>({
+  const { data: repos = [], error: githubError } = useQuery<any[]>({
     queryKey: ['/api/github'],
+    retry: 1, // Only retry once on failure
   });
   
   // Fetch certificates
@@ -482,93 +484,41 @@ const Home = () => {
         </section>
       
         {/* Projects Section */}
-        <section ref={projectsRef} id="projects" className="py-20 bg-gray-800 dark:bg-gray-800">
+        <section ref={projectsRef} id="projects" className="py-20 bg-gray-900">
           <div className="container mx-auto px-6">
             <div className="mb-12 text-center">
-              <h2 className="text-3xl md:text-4xl font-bold font-space mb-4">My Projects</h2>
-              <div className="w-24 h-1 bg-primary-500 mx-auto mb-4"></div>
-              <p className="text-gray-300 max-w-2xl mx-auto">Check out some of my recent projects. Each project represents a unique challenge and learning experience.</p>
+              <h2 className="text-3xl md:text-4xl font-bold font-space mb-4">Projects & Repositories</h2>
+              <div className="w-24 h-1 bg-primary-500 mx-auto"></div>
+              <p className="text-gray-400 mt-4 max-w-2xl mx-auto">
+                A collection of my open-source projects and contributions.
+              </p>
             </div>
             
-            {/* Project Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-              {projects.map(project => (
-                <ProjectCard key={project.id} project={project} />
-              ))}
+            {/* Repository List */}
+            <div className="mb-16">
+              <h3 className="text-2xl font-semibold mb-6 flex items-center gap-2">
+                <i className="ri-git-repository-line text-primary-400"></i>
+                Starred Repositories
+              </h3>
+              <RepositoryList />
             </div>
             
-            {/* GitHub Projects */}
-            <div className="bg-gray-900 rounded-xl p-6 mb-8">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-bold font-space flex items-center gap-2">
-                  <i className="ri-github-fill text-primary-400"></i>
-                  GitHub Repositories
-                </h3>
-                <a 
-                  href="https://github.com/ChristopherJoshy" 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="text-primary-400 hover:text-primary-300 text-sm flex items-center gap-1 transition-colors duration-300"
-                >
-                  View All
-                  <i className="ri-arrow-right-line"></i>
-                </a>
+            {/* Existing Projects */}
+            {projects.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 bg-gray-800 rounded-full mx-auto flex items-center justify-center mb-4">
+                  <i className="ri-code-box-line text-2xl text-primary-400"></i>
+                </div>
+                <h3 className="text-xl font-semibold mb-2">No Projects Yet</h3>
+                <p className="text-gray-400">Projects will appear here once added.</p>
               </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {repos.map((repo, index) => (
-                  <div key={index} className="bg-gray-800 p-4 rounded-lg hover:bg-gray-700 transition-colors duration-300">
-                    <div className="flex justify-between items-start mb-2">
-                      <h4 className="font-semibold">
-                        <a href="#" className="hover:text-primary-400 transition-colors duration-300">
-                          ChristopherJoshy/{repo.name}
-                        </a>
-                      </h4>
-                      <div className="flex items-center gap-2 text-sm text-gray-400">
-                        <span className="flex items-center gap-1">
-                          <i className="ri-star-line"></i>
-                          {repo.stars}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <i className="ri-git-branch-line"></i>
-                          {repo.forks}
-                        </span>
-                      </div>
-                    </div>
-                    <p className="text-sm text-gray-400 mb-3">{repo.description}</p>
-                    <div className="flex items-center gap-2 text-xs flex-wrap">
-                      {repo.languages.map((lang: string, i: number) => {
-                        const bgColorMap: Record<string, string> = {
-                          'JavaScript': 'bg-blue-900 text-blue-300',
-                          'HTML': 'bg-orange-900 text-orange-300',
-                          'CSS': 'bg-purple-900 text-purple-300',
-                          'Firebase': 'bg-red-900 text-red-300',
-                          'Gemini API': 'bg-green-900 text-green-300',
-                        };
-                        return (
-                          <span key={i} className={`${bgColorMap[lang] || 'bg-gray-700 text-gray-300'} px-2 py-0.5 rounded`}>
-                            {lang}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {projects.map((project) => (
+                  <ProjectCard key={project.id} project={project} />
                 ))}
               </div>
-            </div>
-            
-            <div className="text-center">
-              <Button 
-                asChild
-                variant="outline"
-                className="bg-gray-700 hover:bg-gray-600"
-              >
-                <a href="https://github.com/ChristopherJoshy" target="_blank" rel="noopener noreferrer">
-                  <i className="ri-github-line mr-2"></i>
-                  View More on GitHub
-                </a>
-              </Button>
-            </div>
+            )}
           </div>
         </section>
       

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { WebGLManager } from './WebGLManager';
 
 interface SkillNode {
   name: string;
@@ -20,11 +21,17 @@ export class SkillVisualization {
   private skillsGroup: THREE.Group;
   private animationId: number | null = null;
   private hoveredSkill: number | null = null;
+  private webGLManager: WebGLManager;
+  private contextId: string;
 
   constructor(
     container: HTMLElement, 
     skills: {name: string, level: number, color: string}[] = []
   ) {
+    // Get WebGL manager instance
+    this.webGLManager = WebGLManager.getInstance();
+    this.contextId = 'skills-' + Math.random().toString(36).substr(2, 9);
+    
     // Create scene
     this.scene = new THREE.Scene();
     
@@ -37,14 +44,11 @@ export class SkillVisualization {
     );
     this.camera.position.z = 15;
     
-    // Create renderer
-    this.renderer = new THREE.WebGLRenderer({ 
+    // Create renderer using WebGLManager
+    this.renderer = this.webGLManager.createContext(this.contextId, container, {
       antialias: true,
-      alpha: true 
+      alpha: true
     });
-    this.renderer.setSize(container.clientWidth, container.clientHeight);
-    this.renderer.setPixelRatio(window.devicePixelRatio);
-    container.appendChild(this.renderer.domElement);
     
     // Create raycaster for interaction
     this.raycaster = new THREE.Raycaster();
@@ -259,7 +263,8 @@ export class SkillVisualization {
     });
     
     this.scene.remove(this.skillsGroup);
-    this.renderer.domElement.remove();
-    this.renderer.dispose();
+    
+    // Use WebGLManager to dispose context
+    this.webGLManager.disposeContext(this.contextId);
   };
 }
