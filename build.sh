@@ -1,17 +1,11 @@
 #!/bin/bash
 
-# Build the client
 npm install
-npm run build:client
-npm run build:server
-rm -rf dist/client
-mkdir -p dist/client
-mv dist/* dist/client/
-mv dist/client/index.js dist/
-mv dist/client/server dist/
-NODE_ENV=production
 
-# Build the API routes
-npx esbuild api/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist/api
+echo "Building client..."
+npm run build:client
+
+echo "Building API..."
+tsc --project tsconfig.json
 
 echo "Build completed successfully!"

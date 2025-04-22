@@ -6,9 +6,9 @@
   "scripts": {
     "dev": "NODE_ENV=development tsx server/index.ts",
     "prebuild": "npm install",
-    "build": "npm run build:client",
+    "build": "npm run build:client && npm run build:api",
     "build:client": "vite build",
-    "build:server": "tsc && node esbuild.config.js",
+    "build:api": "tsc --project tsconfig.json",
     "start": "NODE_ENV=production node api/index.js",
     "check": "tsc",
     "db:push": "drizzle-kit push:pg",
