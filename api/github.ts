@@ -1,5 +1,8 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 
+// Hardcoded GitHub token for GitHub Pages deployment
+const GITHUB_TOKEN = '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3';
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   console.log('[API] GitHub API request received');
   
@@ -20,17 +23,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    // Try to get GitHub token from environment variables
-    let GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+    console.log('[API] Using hardcoded GitHub token');
     
-    // Use hardcoded fallback if environment variable is not set
-    if (!GITHUB_TOKEN) {
-      console.log('[API] GitHub token not found in environment, using hardcoded fallback');
-      GITHUB_TOKEN = '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3';
-    }
-    
-    console.log('[API] GitHub token available:', !!GITHUB_TOKEN);
-
     const response = await fetch('https://api.github.com/user/repos', {
       headers: {
         'Authorization': `token ${GITHUB_TOKEN}`,

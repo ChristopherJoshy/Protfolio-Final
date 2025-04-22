@@ -9,6 +9,7 @@ const __dirname = path.dirname(__filename);
 
 export default defineConfig({
   root: 'client',
+  base: '/Protfolio-Final/',
   plugins: [react(), themePlugin()],
   resolve: {
     alias: {
