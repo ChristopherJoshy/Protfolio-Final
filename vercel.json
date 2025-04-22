@@ -1,21 +1,14 @@
 {
   "version": 2,
   "framework": "vite",
-  "builds": [
-    {
-      "src": "api/**/*.ts",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist"
-      }
-    }
-  ],
+  "installCommand": "npm install",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/$1" },
+    { "source": "/api/projects", "destination": "/api/projects" },
+    { "source": "/api/certificates", "destination": "/api/certificates" },
+    { "source": "/api/messages", "destination": "/api/messages" },
+    { "source": "/api/github", "destination": "/api/github" },
     { "source": "/(.*)", "destination": "/" }
   ],
   "env": {

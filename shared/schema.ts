@@ -79,7 +79,7 @@ export const insertMessageSchema = createInsertSchema(messages).omit({
 
 export const insertPageViewSchema = createInsertSchema(pageViews).omit({
   id: true,
-  createdAt: true,
+  timestamp: true
 });
 
 // Export types
