@@ -513,11 +513,19 @@ const Home = () => {
                 <p className="text-gray-400">Projects will appear here once added.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {projects.map((project) => (
-                  <ProjectCard key={project.id} project={project} />
-                ))}
-              </div>
+              <>
+                <div className="mb-6">
+                  <h3 className="text-2xl font-semibold mb-6 flex items-center gap-2">
+                    <i className="ri-code-box-line text-primary-400"></i>
+                    Projects
+                  </h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {projects.map((project) => (
+                    <ProjectCard key={project.id} project={project} />
+                  ))}
+                </div>
+              </>
             )}
           </div>
         </section>
