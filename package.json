@@ -6,7 +6,7 @@
   "engines": {
     "node": ">=18.0.0"
   },
-  "homepage": "https://christopher.github.io/Protfolio-Final",
+  "homepage": "https://christopherjoshy.github.io/Protfolio-Final",
   "scripts": {
     "dev": "NODE_ENV=development tsx server/index.ts",
     "build": "npm run build:client",
