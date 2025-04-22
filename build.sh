@@ -1,6 +1,6 @@
 #!/bin/bash
 
-npm install
+npm install --production=false
 
 echo "Building client..."
 npm run build:client
