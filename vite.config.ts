@@ -8,16 +8,17 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export default defineConfig({
+  root: 'client',
   plugins: [react(), themePlugin()],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "src"),
-      "@shared": path.resolve(__dirname, "shared"),
+      "@": path.resolve(__dirname, "./client/src"),
+      "@shared": path.resolve(__dirname, "./shared"),
       "@assets": path.resolve(__dirname, "assets"),
     },
   },
   build: {
-    outDir: "dist",
+    outDir: "../dist",
     emptyOutDir: true,
     sourcemap: true,
     rollupOptions: {
