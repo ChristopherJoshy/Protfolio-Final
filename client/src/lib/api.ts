@@ -1,7 +1,5 @@
 // API helper with debugging
-const API_URL = window.location.hostname === 'localhost' 
-  ? 'http://localhost:5000' 
-  : 'https://protfolio-final-api.onrender.com'; // Replace with your actual API URL when deployed
+const API_URL = 'https://protfolio-final-api.onrender.com'; // Always use the deployed API URL
 
 // Log all API requests and responses for debugging
 const logRequest = (method: string, url: string, data?: any) => {
