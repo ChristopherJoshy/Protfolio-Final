@@ -20,8 +20,8 @@
     }
   ],
   "env": {
-    "DATABASE_URL": "@database_url",
+    "DATABASE_URL": "postgresql://neondb_owner:npg_IUcurO9YfXP1@ep-broad-star-a49b8m9i-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require",
     "NODE_ENV": "production",
-    "GITHUB_TOKEN": "@github_token"
+    "GITHUB_TOKEN": "@GITHUB_TOKEN"
   }
 }
