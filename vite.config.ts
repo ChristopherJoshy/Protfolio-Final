@@ -13,22 +13,13 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./client/src"),
-      "@shared": path.resolve(__dirname, "./shared"),
-      "@assets": path.resolve(__dirname, "assets"),
-    },
+      "@shared": path.resolve(__dirname, "./shared")
+    }
   },
   build: {
     outDir: "../dist",
     emptyOutDir: true,
-    sourcemap: true,
-    rollupOptions: {
-      input: {
-        main: path.resolve(__dirname, "index.html")
-      },
-      output: {
-        manualChunks: undefined
-      }
-    }
+    sourcemap: true
   },
   server: {
     port: 3000,
