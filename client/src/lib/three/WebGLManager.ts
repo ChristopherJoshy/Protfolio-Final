@@ -4,9 +4,10 @@ export class WebGLManager {
   private static instance: WebGLManager;
   private contexts: Map<string, THREE.WebGLRenderer> = new Map();
   private activeContext: string | null = null;
-  private readonly MAX_CONTEXTS = 2; // Reduced from 3 to 2 to avoid memory issues
+  private readonly MAX_CONTEXTS = 1; // Only allow one context at a time
   private lastRenderTime: Map<string, number> = new Map();
   private cleanupInterval: number | null = null;
+  private isDisposing = false;
 
   private constructor() {
     // Set up automatic cleanup of inactive renderers
@@ -21,46 +22,41 @@ export class WebGLManager {
   }
 
   createContext(id: string, container: HTMLElement, options: THREE.WebGLRendererParameters = {}): THREE.WebGLRenderer {
-    // If context already exists, return it
+    if (this.isDisposing) return this.createFallbackRenderer(container);
+    
+    // If context already exists, dispose it first
     if (this.contexts.has(id)) {
-      return this.contexts.get(id)!;
+      this.disposeContext(id);
     }
 
-    // If we've reached the maximum number of contexts, dispose the oldest one
+    // If we've reached the maximum number of contexts, dispose all existing ones
     if (this.contexts.size >= this.MAX_CONTEXTS) {
-      // Find the least recently used context
-      let oldestId = Array.from(this.contexts.keys())[0];
-      let oldestTime = this.lastRenderTime.get(oldestId) || 0;
-      
-      this.lastRenderTime.forEach((time, contextId) => {
-        if (time < oldestTime) {
-          oldestTime = time;
-          oldestId = contextId;
-        }
-      });
-      
-      console.log(`WebGLManager: Maximum contexts reached, disposing ${oldestId}`);
-      this.disposeContext(oldestId);
+      console.log('WebGLManager: Maximum contexts reached, disposing all contexts');
+      this.disposeAllContexts();
     }
 
     try {
-      // Create new renderer with error handling
       const renderer = new THREE.WebGLRenderer({
-        antialias: false, // Set to false for better performance
+        antialias: false,
         alpha: true,
         powerPreference: 'high-performance',
-        precision: 'mediump', // Use mediump for better performance
+        precision: 'mediump',
         ...options
       });
 
-      // Set size and pixel ratio (limit pixel ratio for performance)
       renderer.setSize(container.clientWidth, container.clientHeight);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+      renderer.setPixelRatio(1);
 
-      // Add to container
-      container.appendChild(renderer.domElement);
+      // Create a wrapper div to hold the canvas
+      const wrapper = document.createElement('div');
+      wrapper.style.position = 'absolute';
+      wrapper.style.top = '0';
+      wrapper.style.left = '0';
+      wrapper.style.width = '100%';
+      wrapper.style.height = '100%';
+      wrapper.appendChild(renderer.domElement);
+      container.appendChild(wrapper);
 
-      // Store context
       this.contexts.set(id, renderer);
       this.activeContext = id;
       this.lastRenderTime.set(id, performance.now());
@@ -68,41 +64,43 @@ export class WebGLManager {
       return renderer;
     } catch (error) {
       console.error('Failed to create WebGL context:', error);
-      
-      // Create a fallback div to indicate WebGL failure
-      const fallbackDiv = document.createElement('div');
-      fallbackDiv.style.width = '100%';
-      fallbackDiv.style.height = '100%';
-      fallbackDiv.style.backgroundColor = '#121212';
-      container.appendChild(fallbackDiv);
-      
-      // Return a dummy renderer that does nothing
-      const dummyRenderer = {
-        setSize: () => {},
-        render: () => {},
-        dispose: () => {},
-        domElement: fallbackDiv,
-      } as unknown as THREE.WebGLRenderer;
-      
-      return dummyRenderer;
+      return this.createFallbackRenderer(container);
     }
+  }
+
+  private createFallbackRenderer(container: HTMLElement): THREE.WebGLRenderer {
+    const fallbackDiv = document.createElement('div');
+    fallbackDiv.style.width = '100%';
+    fallbackDiv.style.height = '100%';
+    fallbackDiv.style.backgroundColor = '#121212';
+    container.appendChild(fallbackDiv);
+    
+    return {
+      setSize: () => {},
+      render: () => {},
+      dispose: () => {},
+      domElement: fallbackDiv,
+    } as unknown as THREE.WebGLRenderer;
+  }
+
+  private disposeAllContexts(): void {
+    this.isDisposing = true;
+    const contextIds = Array.from(this.contexts.keys());
+    contextIds.forEach(id => this.disposeContext(id));
+    this.isDisposing = false;
   }
 
   getContext(id: string): THREE.WebGLRenderer | null {
     return this.contexts.get(id) || null;
   }
 
-  // Call this method whenever a renderer is used
-  updateLastRenderTime(id: string) {
-    if (this.contexts.has(id)) {
-      this.lastRenderTime.set(id, performance.now());
-    }
+  updateLastRenderTime(id: string): void {
+    this.lastRenderTime.set(id, performance.now());
   }
 
-  // Check and dispose renderers that haven't been used in a while
   private checkInactiveRenderers() {
     const now = performance.now();
-    const inactiveThreshold = 60000; // 1 minute
+    const inactiveThreshold = 30000; // 30 seconds
     
     this.lastRenderTime.forEach((time, id) => {
       if (now - time > inactiveThreshold) {
@@ -119,35 +117,42 @@ export class WebGLManager {
     }
   }
 
-  disposeContext(id: string) {
+  disposeContext(id: string): void {
     const renderer = this.contexts.get(id);
     if (renderer) {
       try {
+        // Remove from DOM safely
+        const canvas = renderer.domElement;
+        const wrapper = canvas.parentElement;
+        if (wrapper && wrapper.parentElement) {
+          wrapper.parentElement.removeChild(wrapper);
+        } else if (canvas.parentElement) {
+          canvas.parentElement.removeChild(canvas);
+        }
+        
+        // Dispose renderer and its resources
         renderer.dispose();
-        if (renderer.domElement.parentNode) {
-          renderer.domElement.remove();
+        renderer.forceContextLoss();
+        
+        // Clear from maps
+        this.contexts.delete(id);
+        this.lastRenderTime.delete(id);
+        
+        if (this.activeContext === id) {
+          this.activeContext = null;
         }
       } catch (error) {
         console.error('Error disposing WebGL context:', error);
       }
-      
-      this.contexts.delete(id);
-      this.lastRenderTime.delete(id);
-      
-      if (this.activeContext === id) {
-        this.activeContext = null;
-      }
     }
   }
 
-  disposeAll() {
-    this.contexts.forEach((renderer, id) => {
-      this.disposeContext(id);
-    });
-    
-    if (this.cleanupInterval !== null) {
-      window.clearInterval(this.cleanupInterval);
+  // Cleanup method to be called when the application is unmounted
+  cleanup(): void {
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
       this.cleanupInterval = null;
     }
+    this.disposeAllContexts();
   }
 } 

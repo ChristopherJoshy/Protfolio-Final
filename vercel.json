@@ -5,8 +5,8 @@
       "src": "client/package.json",
       "use": "@vercel/static-build",
       "config": {
-        "buildCommand": "npm run build",
-        "outputDirectory": "dist"
+        "buildCommand": "cd ../client && npm install && vite build",
+        "outputDirectory": "public"
       }
     },
     {
@@ -21,16 +21,17 @@
     },
     {
       "src": "/(.*)",
-      "dest": "client/dist/$1",
+      "dest": "client/public/$1",
       "continue": true
     },
     {
       "src": "/(.*)",
-      "dest": "client/dist/index.html"
+      "dest": "client/public/index.html"
     }
   ],
   "env": {
     "DATABASE_URL": "@database_url",
-    "NODE_ENV": "production"
+    "NODE_ENV": "production",
+    "GITHUB_TOKEN": "@github_token"
   }
 }

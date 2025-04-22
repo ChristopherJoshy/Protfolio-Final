@@ -7,6 +7,7 @@ export interface BackgroundOptions {
   frameRate?: number;
   disableMouseTracking?: boolean;
   quality?: 'low' | 'medium' | 'high';
+  theme?: 'light' | 'dark';
 }
 
 export class BackgroundAnimation {
@@ -105,9 +106,9 @@ export class BackgroundAnimation {
     const particleSize = this.quality === 'low' ? 0.08 : this.quality === 'medium' ? 0.1 : 0.12;
     const particlesMaterial = new THREE.PointsMaterial({
       size: particleSize,
-      color: new THREE.Color('#6366f1'),
+      color: new THREE.Color(options.theme === 'light' ? '#4f46e5' : '#6366f1'),
       transparent: true,
-      opacity: this.quality === 'low' ? 0.5 : 0.7,
+      opacity: options.theme === 'light' ? 0.5 : 0.7,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
       sizeAttenuation: this.quality !== 'low'
@@ -301,5 +302,21 @@ export class BackgroundAnimation {
     
     // Use WebGLManager to dispose context
     this.webGLManager.disposeContext(this.contextId);
+  };
+
+  resize = (width: number, height: number) => {
+    if (this.isDestroyed) return;
+    
+    this.camera.aspect = width / height;
+    this.camera.updateProjectionMatrix();
+    this.renderer.setSize(width, height);
+  };
+
+  updateTheme = (theme: 'light' | 'dark') => {
+    if (this.isDestroyed || !this.particles) return;
+
+    const material = this.particles.material as THREE.PointsMaterial;
+    material.color.set(theme === 'dark' ? '#6366f1' : '#4f46e5');
+    material.opacity = theme === 'dark' ? 0.7 : 0.5;
   };
 }

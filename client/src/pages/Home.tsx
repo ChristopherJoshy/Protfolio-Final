@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import ThreeBackground from '@/components/ThreeBackground';
+import { ThreeBackground } from '@/components/ThreeBackground';
 import SkillVisualization from '@/components/SkillVisualization';
 import ProjectCard from '@/components/ProjectCard';
 import Header from '@/components/Header';
@@ -20,6 +20,7 @@ import RepositoryList from '@/components/RepositoryList';
 
 const Home = () => {
   const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
   
   // Refs for scroll
   const aboutRef = useRef<HTMLElement>(null);
@@ -42,6 +43,7 @@ const Home = () => {
   // Form submission
   const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
     
     try {
       const data: InsertMessage = {
@@ -74,6 +76,8 @@ const Home = () => {
         description: "Failed to send message. Please try again later.",
         variant: "destructive"
       });
+    } finally {
+      setIsLoading(false);
     }
   };
   
@@ -550,6 +554,7 @@ const Home = () => {
                       onChange={(e) => setContactForm({...contactForm, name: e.target.value})}
                       className="w-full px-4 py-3 bg-gray-800 border border-gray-700 focus:ring-primary-500" 
                       required 
+                      disabled={isLoading}
                     />
                   </div>
                   <div>
@@ -561,6 +566,7 @@ const Home = () => {
                       onChange={(e) => setContactForm({...contactForm, email: e.target.value})}
                       className="w-full px-4 py-3 bg-gray-800 border border-gray-700 focus:ring-primary-500" 
                       required 
+                      disabled={isLoading}
                     />
                   </div>
                   <div>
@@ -571,6 +577,7 @@ const Home = () => {
                       onChange={(e) => setContactForm({...contactForm, subject: e.target.value})}
                       className="w-full px-4 py-3 bg-gray-800 border border-gray-700 focus:ring-primary-500" 
                       required 
+                      disabled={isLoading}
                     />
                   </div>
                   <div>
@@ -582,15 +589,26 @@ const Home = () => {
                       onChange={(e) => setContactForm({...contactForm, message: e.target.value})}
                       className="w-full px-4 py-3 bg-gray-800 border border-gray-700 focus:ring-primary-500" 
                       required 
+                      disabled={isLoading}
                     />
                   </div>
                   <div>
                     <Button 
                       type="submit" 
-                      className="w-full bg-primary-600 hover:bg-primary-700"
+                      className="w-full bg-primary-600 hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={isLoading}
                     >
-                      <i className="ri-send-plane-line mr-2"></i>
-                      Send Message
+                      {isLoading ? (
+                        <div className="flex items-center justify-center gap-2">
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          <span>Sending...</span>
+                        </div>
+                      ) : (
+                        <>
+                          <i className="ri-send-plane-line mr-2"></i>
+                          Send Message
+                        </>
+                      )}
                     </Button>
                   </div>
                 </form>
