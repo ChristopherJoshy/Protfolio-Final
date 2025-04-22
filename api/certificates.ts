@@ -1,6 +1,7 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import { storage } from '../server/storage';
-import { insertCertificateSchema } from '../shared/schema';
+import { eq } from 'drizzle-orm';
+import { initDB } from './_utils';
+import { insertCertificateSchema, certificates } from '../shared/schema';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Set CORS headers
@@ -14,11 +15,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).end();
   }
 
+  // Initialize DB connection
+  const db = initDB();
+
   // Get certificates
   if (req.method === 'GET') {
     try {
-      const certificates = await storage.getCertificates();
-      return res.json(certificates);
+      const certificatesList = await db.select().from(certificates).orderBy(certificates.createdAt);
+      console.log(`Retrieved ${certificatesList.length} certificates from database`);
+      return res.json(certificatesList);
     } catch (error) {
       console.error('Error fetching certificates:', error);
       return res.status(500).json({ error: 'Failed to fetch certificates' });
@@ -29,8 +34,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'POST') {
     try {
       const certificateData = insertCertificateSchema.parse(req.body);
-      const certificate = await storage.createCertificate(certificateData);
-      return res.status(201).json(certificate);
+      const result = await db.insert(certificates).values(certificateData).returning();
+      console.log('Certificate created successfully', result[0].title);
+      return res.status(201).json(result[0]);
     } catch (error) {
       console.error('Error creating certificate:', error);
       return res.status(400).json({ error: 'Invalid certificate data' });
@@ -51,13 +57,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     
     try {
       const certificateData = req.body;
-      const certificate = await storage.updateCertificate(certificateId, certificateData);
+      const result = await db.update(certificates).set(certificateData)
+        .where(eq(certificates.id, certificateId)).returning();
       
-      if (!certificate) {
+      if (result.length === 0) {
         return res.status(404).json({ error: 'Certificate not found' });
       }
       
-      return res.json(certificate);
+      console.log('Certificate updated successfully', result[0].title);
+      return res.json(result[0]);
     } catch (error) {
       console.error('Error updating certificate:', error);
       return res.status(400).json({ error: 'Invalid certificate data' });
@@ -76,12 +84,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Invalid certificate ID' });
     }
     
-    const success = await storage.deleteCertificate(certificateId);
-    if (!success) {
-      return res.status(404).json({ error: 'Certificate not found' });
+    try {
+      const result = await db.delete(certificates)
+        .where(eq(certificates.id, certificateId)).returning();
+      
+      if (result.length === 0) {
+        return res.status(404).json({ error: 'Certificate not found' });
+      }
+      
+      console.log('Certificate deleted successfully', certificateId);
+      return res.status(204).end();
+    } catch (error) {
+      console.error('Error deleting certificate:', error);
+      return res.status(500).json({ error: 'Failed to delete certificate' });
     }
-    
-    return res.status(204).end();
   }
 
   // Handle unsupported methods

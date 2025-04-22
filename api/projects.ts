@@ -1,6 +1,7 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import { storage } from '../server/storage';
-import { insertProjectSchema } from '../shared/schema';
+import { eq } from 'drizzle-orm';
+import { initDB } from './_utils';
+import { insertProjectSchema, projects } from '../shared/schema';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Set CORS headers
@@ -14,6 +15,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).end();
   }
 
+  // Initialize DB connection
+  const db = initDB();
+
   // Projects routes
   if (req.method === 'GET') {
     const { id, featured } = req.query;
@@ -25,31 +29,50 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ error: 'Invalid project ID' });
       }
       
-      const project = await storage.getProject(projectId);
-      if (!project) {
-        return res.status(404).json({ error: 'Project not found' });
+      try {
+        const result = await db.select().from(projects).where(eq(projects.id, projectId)).limit(1);
+        if (result.length === 0) {
+          return res.status(404).json({ error: 'Project not found' });
+        }
+        return res.json(result[0]);
+      } catch (error) {
+        console.error('Error getting project:', error);
+        return res.status(500).json({ error: 'Failed to fetch project' });
       }
-      
-      return res.json(project);
     }
     
     // Get featured projects
     if (featured === 'true') {
-      const projects = await storage.getFeaturedProjects();
-      return res.json(projects);
+      try {
+        const featuredProjects = await db.select().from(projects)
+          .where(eq(projects.featured, true))
+          .orderBy(projects.createdAt);
+        console.log(`Retrieved ${featuredProjects.length} featured projects`);
+        return res.json(featuredProjects);
+      } catch (error) {
+        console.error('Error getting featured projects:', error);
+        return res.status(500).json({ error: 'Failed to fetch featured projects' });
+      }
     }
     
     // Get all projects
-    const projects = await storage.getProjects();
-    return res.json(projects);
+    try {
+      const projectsList = await db.select().from(projects).orderBy(projects.createdAt);
+      console.log(`Retrieved ${projectsList.length} projects from database`);
+      return res.json(projectsList);
+    } catch (error) {
+      console.error('Error getting projects:', error);
+      return res.status(500).json({ error: 'Failed to fetch projects' });
+    }
   }
 
   // Create a project
   if (req.method === 'POST') {
     try {
       const projectData = insertProjectSchema.parse(req.body);
-      const project = await storage.createProject(projectData);
-      return res.status(201).json(project);
+      const result = await db.insert(projects).values(projectData).returning();
+      console.log('Project created successfully', result[0].title);
+      return res.status(201).json(result[0]);
     } catch (error) {
       console.error('Error creating project:', error);
       return res.status(400).json({ error: 'Invalid project data' });
@@ -70,13 +93,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     
     try {
       const projectData = req.body;
-      const project = await storage.updateProject(projectId, projectData);
+      const result = await db.update(projects).set(projectData)
+        .where(eq(projects.id, projectId)).returning();
       
-      if (!project) {
+      if (result.length === 0) {
         return res.status(404).json({ error: 'Project not found' });
       }
       
-      return res.json(project);
+      console.log('Project updated successfully', result[0].title);
+      return res.json(result[0]);
     } catch (error) {
       console.error('Error updating project:', error);
       return res.status(400).json({ error: 'Invalid project data' });
@@ -95,12 +120,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Invalid project ID' });
     }
     
-    const success = await storage.deleteProject(projectId);
-    if (!success) {
-      return res.status(404).json({ error: 'Project not found' });
+    try {
+      const result = await db.delete(projects)
+        .where(eq(projects.id, projectId)).returning();
+      
+      if (result.length === 0) {
+        return res.status(404).json({ error: 'Project not found' });
+      }
+      
+      console.log('Project deleted successfully', projectId);
+      return res.status(204).end();
+    } catch (error) {
+      console.error('Error deleting project:', error);
+      return res.status(500).json({ error: 'Failed to delete project' });
     }
-    
-    return res.status(204).end();
   }
 
   // Handle unsupported methods
