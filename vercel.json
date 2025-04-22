@@ -4,12 +4,16 @@
   "installCommand": "npm install",
   "buildCommand": "./build.sh",
   "outputDirectory": "dist",
-  "rewrites": [
-    { "source": "/api/projects", "destination": "/api/projects" },
-    { "source": "/api/certificates", "destination": "/api/certificates" },
-    { "source": "/api/messages", "destination": "/api/messages" },
-    { "source": "/api/github", "destination": "/api/github" },
-    { "source": "/(.*)", "destination": "/" }
+  "functions": {
+    "api/*.ts": {
+      "memory": 1024,
+      "maxDuration": 10
+    }
+  },
+  "routes": [
+    { "handle": "filesystem" },
+    { "src": "/api/(.*)", "dest": "/api/$1.ts" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ],
   "env": {
     "DATABASE_URL": "postgresql://neondb_owner:npg_IUcurO9YfXP1@ep-broad-star-a49b8m9i-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require",
