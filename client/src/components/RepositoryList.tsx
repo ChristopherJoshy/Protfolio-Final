@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useTheme } from '@/components/theme-provider';
+import { useTheme } from '@/hooks/useTheme';
 
 interface Repository {
   name: string;

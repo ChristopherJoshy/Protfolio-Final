@@ -1,22 +1,24 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
-import { ThemeProvider } from './components/theme-provider';
-import './styles/theme.css';  // Import our theme styles
-import 'remixicon/fonts/remixicon.css';  // Import Remix Icon CSS
+import './styles/theme.css';
+import 'remixicon/fonts/remixicon.css';
 
 const themeScript = `
   (function() {
-    const theme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-    document.documentElement.classList.add(theme);
+    try {
+      const theme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.classList.remove('light', 'dark');
+      document.documentElement.classList.add(theme);
+    } catch (e) {
+      console.log('Failed to set initial theme');
+    }
   })();
 `;
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
     <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-    <ThemeProvider>
-      <App />
-    </ThemeProvider>
+    <App />
   </React.StrictMode>
 );
