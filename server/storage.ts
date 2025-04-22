@@ -14,8 +14,14 @@ export class DbStorage implements IStorage {
   private db;
   
   constructor() {
+    // Get the connection string from environment variables
+    const connectionString = process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_IUcurO9YfXP1@ep-broad-star-a49b8m9i-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require';
+    
+    if (!connectionString) {
+      throw new Error('DATABASE_URL environment variable is not set');
+    }
+    
     // Create a neon client with the connection string
-    const connectionString = 'postgresql://neondb_owner:npg_IUcurO9YfXP1@ep-broad-star-a49b8m9i-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require';
     const client = neon(connectionString);
     
     // Pass the client to drizzle correctly using the HTTP adapter
