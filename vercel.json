@@ -2,31 +2,22 @@
   "version": 2,
   "builds": [
     {
-      "src": "client/package.json",
-      "use": "@vercel/static-build",
+      "src": "package.json",
+      "use": "@vercel/node",
       "config": {
-        "buildCommand": "cd ../client && npm install && vite build",
-        "outputDirectory": "public"
+        "buildCommand": "npm install && npm run build",
+        "outputDirectory": "dist"
       }
-    },
-    {
-      "src": "server/index.ts",
-      "use": "@vercel/node"
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "server/index.ts"
+      "dest": "/api/$1"
     },
     {
       "src": "/(.*)",
-      "dest": "client/public/$1",
-      "continue": true
-    },
-    {
-      "src": "/(.*)",
-      "dest": "client/public/index.html"
+      "dest": "/$1"
     }
   ],
   "env": {

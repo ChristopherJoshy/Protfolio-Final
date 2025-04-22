@@ -11,14 +11,14 @@ export default defineConfig({
   plugins: [react(), themePlugin()],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "client", "src"),
+      "@": path.resolve(__dirname, "src"),
       "@shared": path.resolve(__dirname, "shared"),
-      "@assets": path.resolve(__dirname, "attached_assets"),
+      "@assets": path.resolve(__dirname, "assets"),
     },
   },
   root: path.resolve(__dirname, "client"),
   build: {
-    outDir: path.resolve(__dirname, "public"),
+    outDir: path.resolve(__dirname, "dist"),
     emptyOutDir: true,
     sourcemap: true
   },
