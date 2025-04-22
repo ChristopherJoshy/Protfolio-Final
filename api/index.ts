@@ -184,7 +184,11 @@ app.delete('/api/messages/:id', async (req: Request, res: Response) => {
 // GitHub endpoint with dynamic data
 app.get('/api/github', async (_req: Request, res: Response) => {
   try {
-    const GITHUB_TOKEN = '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';
+    const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+    
+    if (!GITHUB_TOKEN) {
+      return res.status(500).json({ error: 'GitHub token not configured' });
+    }
 
     const response = await fetch('https://api.github.com/user/repos', {
       headers: {

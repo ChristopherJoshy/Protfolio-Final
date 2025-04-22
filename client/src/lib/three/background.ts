@@ -6,6 +6,7 @@ export interface BackgroundOptions {
   particleCount?: number;
   frameRate?: number;
   disableMouseTracking?: boolean;
+  quality?: 'low' | 'medium' | 'high';
 }
 
 export class BackgroundAnimation {
@@ -29,22 +30,44 @@ export class BackgroundAnimation {
   private isFirefox = false;
   private webGLManager: WebGLManager;
   private contextId: string;
+  private quality: 'low' | 'medium' | 'high';
+  private isDestroyed = false;
   
   constructor(container: HTMLElement, options: BackgroundOptions = {}) {
     // Get WebGL manager instance
     this.webGLManager = WebGLManager.getInstance();
     this.contextId = 'background-' + Math.random().toString(36).substr(2, 9);
     
-    // Detect Firefox
+    // Detect browser
     this.isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
     
-    // Set options with defaults
-    const particleCount = options.particleCount || (this.isMobile ? 500 : 800);
-    this.frameRateLimiter = 1000 / (options.frameRate || 30);
-    this.disableMouseTracking = !!options.disableMouseTracking;
-    
     // Check if mobile device for reduced effects
-    this.isMobile = window.innerWidth < 768;
+    this.isMobile = window.innerWidth < 768 || ('ontouchstart' in window);
+    
+    // Set quality based on device/browser
+    this.quality = options.quality || 
+                  (this.isMobile ? 'low' : 
+                   this.isFirefox ? 'low' : 'medium');
+    
+    // Set options with defaults based on quality and device
+    let particleCount;
+    switch (this.quality) {
+      case 'low': 
+        particleCount = 300;
+        break;
+      case 'medium': 
+        particleCount = 500;
+        break;
+      case 'high': 
+        particleCount = 800;
+        break;
+      default:
+        particleCount = this.isMobile ? 300 : 500;
+    }
+    
+    particleCount = options.particleCount || particleCount;
+    this.frameRateLimiter = 1000 / (options.frameRate || (this.isMobile ? 20 : this.isFirefox ? 15 : 30));
+    this.disableMouseTracking = !!options.disableMouseTracking || this.isMobile || this.isFirefox;
     
     // Create scene
     this.scene = new THREE.Scene();
@@ -58,32 +81,36 @@ export class BackgroundAnimation {
     );
     this.camera.position.z = 30;
     
-    // Create renderer using WebGLManager
-    this.renderer = this.webGLManager.createContext(this.contextId, container, {
-      antialias: false,
+    // Create renderer using WebGLManager with optimized settings based on quality
+    const rendererOptions: THREE.WebGLRendererParameters = {
+      antialias: this.quality === 'high',
       alpha: true,
       powerPreference: 'high-performance',
-      precision: this.isMobile ? 'lowp' : 'mediump'
-    });
+      precision: this.quality === 'low' ? 'lowp' : 'mediump'
+    };
     
-    // Create particles with reduced count
+    this.renderer = this.webGLManager.createContext(this.contextId, container, rendererOptions);
+    
+    // Create particles with optimized geometry
     const particlesGeometry = new THREE.BufferGeometry();
     const posArray = new Float32Array(particleCount * 3);
     
     for(let i = 0; i < particleCount * 3; i++) {
-      posArray[i] = (Math.random() - 0.5) * 100;
+      posArray[i] = (Math.random() - 0.5) * (this.isMobile ? 60 : 100);
     }
     
     particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
     
-    // Optimize material
+    // Optimize material based on quality
+    const particleSize = this.quality === 'low' ? 0.08 : this.quality === 'medium' ? 0.1 : 0.12;
     const particlesMaterial = new THREE.PointsMaterial({
-      size: 0.12,
+      size: particleSize,
       color: new THREE.Color('#6366f1'),
       transparent: true,
-      opacity: 0.7,
+      opacity: this.quality === 'low' ? 0.5 : 0.7,
       blending: THREE.AdditiveBlending,
-      depthWrite: false
+      depthWrite: false,
+      sizeAttenuation: this.quality !== 'low'
     });
     
     this.particles = new THREE.Points(particlesGeometry, particlesMaterial);
@@ -92,21 +119,13 @@ export class BackgroundAnimation {
     // Add event listeners with passive option for better performance
     window.addEventListener('resize', this.handleResize, { passive: true });
     
-    if (!this.isMobile && !this.disableMouseTracking) {
+    if (!this.disableMouseTracking) {
       document.addEventListener('mousemove', this.handleMouseMove, { passive: true });
     }
     
     // Monitor for potential memory issues in Firefox
     if (this.isFirefox) {
-      this.frameRateLimiter = 1000 / 15;
-      
-      document.addEventListener('visibilitychange', () => {
-        if (document.hidden) {
-          this.pause();
-        } else {
-          this.resume();
-        }
-      });
+      document.addEventListener('visibilitychange', this.handleVisibilityChange);
     }
     
     // Start animation
@@ -116,6 +135,8 @@ export class BackgroundAnimation {
   }
   
   handleResize = () => {
+    if (this.isDestroyed) return;
+    
     const container = this.renderer.domElement.parentElement;
     if (!container) return;
     
@@ -125,12 +146,24 @@ export class BackgroundAnimation {
   };
   
   handleMouseMove = (event: MouseEvent) => {
+    if (this.isDestroyed) return;
+    
     this.targetMouseX = (event.clientX / window.innerWidth) * 2 - 1;
     this.targetMouseY = -(event.clientY / window.innerHeight) * 2 + 1;
   };
   
+  handleVisibilityChange = () => {
+    if (document.hidden) {
+      this.pause();
+    } else {
+      this.resume();
+    }
+  };
+  
   // Check memory performance (Firefox specific)
   checkMemoryPerformance = () => {
+    if (this.isDestroyed) return;
+    
     // Only check every 200 frames to avoid overhead
     if (this.isFirefox && this.frameCount % 200 === 0) {
       const now = performance.now();
@@ -156,12 +189,13 @@ export class BackgroundAnimation {
   
   // Reduce quality to prevent crashes
   reduceQuality = () => {
+    if (this.isDestroyed) return;
+    
     // If we've already reduced quality significantly, disable animation
     if (this.frameRateLimiter >= 1000 / 5) {
       console.warn('Performance issues detected. Disabling particles animation.');
       localStorage.setItem('enable-particles', 'false');
       this.cleanup();
-      window.location.reload();
       return;
     }
     
@@ -171,10 +205,16 @@ export class BackgroundAnimation {
     
     // Force a garbage collection pause
     this.pause();
-    setTimeout(() => this.resume(), 100);
+    setTimeout(() => {
+      if (!this.isDestroyed) {
+        this.resume();
+      }
+    }, 100);
   };
   
   animate = () => {
+    if (this.isDestroyed) return;
+    
     this.animationId = requestAnimationFrame(this.animate);
     this.frameCount++;
     
@@ -199,17 +239,18 @@ export class BackgroundAnimation {
     this.mouseY += (this.targetMouseY - this.mouseY) * 0.05;
     
     // Rotate particles with lower values for better performance
-    this.particles.rotation.x += 0.0002;
-    this.particles.rotation.y += 0.0003;
+    this.particles.rotation.x += 0.0001;
+    this.particles.rotation.y += 0.0002;
     
     // Move particles based on mouse (reduced intensity)
     if (!this.disableMouseTracking) {
-      this.particles.rotation.x += this.mouseY * 0.0002;
-      this.particles.rotation.y += this.mouseX * 0.0002;
+      this.particles.rotation.x += this.mouseY * 0.0001;
+      this.particles.rotation.y += this.mouseX * 0.0001;
     }
     
     try {
       this.renderer.render(this.scene, this.camera);
+      this.webGLManager.updateLastRenderTime(this.contextId);
     } catch (error) {
       console.error('Rendering error:', error);
       this.reduceQuality();
@@ -225,28 +266,38 @@ export class BackgroundAnimation {
   
   // Method to resume animation
   resume = () => {
+    if (this.isDestroyed) return;
+    
     this.isPaused = false;
     this.lastTime = performance.now(); // Reset time to avoid jumps
   };
   
   cleanup = () => {
+    if (this.isDestroyed) return;
+    this.isDestroyed = true;
+    
     if (this.animationId !== null) {
       cancelAnimationFrame(this.animationId);
+      this.animationId = null;
     }
     
     window.removeEventListener('resize', this.handleResize);
-    if (!this.isMobile && !this.disableMouseTracking) {
+    if (!this.disableMouseTracking) {
       document.removeEventListener('mousemove', this.handleMouseMove);
     }
     
-    if (this.isFirefox) {
-      document.removeEventListener('visibilitychange', () => {});
-    }
+    document.removeEventListener('visibilitychange', this.handleVisibilityChange);
     
     // Clean up THREE.js resources
-    this.scene.remove(this.particles);
-    (this.particles.geometry as THREE.BufferGeometry).dispose();
-    (this.particles.material as THREE.Material).dispose();
+    if (this.particles) {
+      this.scene.remove(this.particles);
+      if (this.particles.geometry) {
+        (this.particles.geometry as THREE.BufferGeometry).dispose();
+      }
+      if (this.particles.material) {
+        (this.particles.material as THREE.Material).dispose();
+      }
+    }
     
     // Use WebGLManager to dispose context
     this.webGLManager.disposeContext(this.contextId);

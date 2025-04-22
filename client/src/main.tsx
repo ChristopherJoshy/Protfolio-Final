@@ -1,10 +1,14 @@
-import { createRoot } from "react-dom/client";
-import App from "./App";
-import "./index.css";
-import { ThemeProvider } from 'next-themes';
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App';
+import { ThemeProvider } from './components/theme-provider';
+import './styles/theme.css';  // Import our theme styles
+import 'remixicon/fonts/remixicon.css';  // Import Remix Icon CSS
 
-createRoot(document.getElementById("root")!).render(
-  <ThemeProvider attribute="class" defaultTheme="dark">
-    <App />
-  </ThemeProvider>
+ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
+  <React.StrictMode>
+    <ThemeProvider>
+      <App />
+    </ThemeProvider>
+  </React.StrictMode>
 );

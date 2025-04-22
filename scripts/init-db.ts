@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { drizzle } from 'drizzle-orm/neon-http';
 import { neon } from '@neondatabase/serverless';
 import { users, projects, certificates, messages } from '../shared/schema';
@@ -6,8 +7,8 @@ import { migrate } from 'drizzle-orm/neon-http/migrator';
 import * as bcrypt from 'bcryptjs';
 
 async function main() {
-  // Use hardcoded connection string
-  const connectionString = 'postgresql://neondb_owner:npg_IUcurO9YfXP1@ep-broad-star-a49b8m9i-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require';
+  // Use environment variable or fallback to hardcoded connection string
+  const connectionString = process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_IUcurO9YfXP1@ep-broad-star-a49b8m9i-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require';
 
   try {
     console.log('🔧 Connecting to database...');

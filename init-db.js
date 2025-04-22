@@ -1,7 +1,8 @@
 import { neon } from '@neondatabase/serverless';
+import 'dotenv/config';
 
 // Define database connection string
-const connectionString = 'postgresql://neondb_owner:npg_IUcurO9YfXP1@ep-broad-star-a49b8m9i-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require';
+const connectionString = process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_IUcurO9YfXP1@ep-broad-star-a49b8m9i-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require';
 const sql = neon(connectionString);
 
 async function main() {
